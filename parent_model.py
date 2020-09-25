@@ -1,13 +1,16 @@
-# Based on ganguli-lab/grid-pattern-formation repo
+"""
+RNN parent class for use in experiments.
+"""
 
 import tensorflow as tf
 from tensorflow.keras.layers import Dense, SimpleRNN, Activation
 from tensorflow.keras.models import Model
-import util
-import pickle
 
 
 class RNN(Model):
+    """
+    Sequence-to-sequence vanilla RNN with linear encoder for start state.
+    """
     def __init__(self, input_dim, hidden_dim, output_dim, sequence_length,
                  activation='tanh', loss_fun='MSE', weight_decay=0,
                  metabolic_cost=0, use_bias=True, recurrent_constraint=None):
@@ -28,23 +31,22 @@ class RNN(Model):
                              use_bias=use_bias)
         self.decoder = Dense(output_dim, name='decoder', use_bias=use_bias)
 
-        # Loss function
         self.loss_fun = tf.keras.losses.get(loss_fun)
         self.weight_decay = weight_decay
         self.metabolic_cost = metabolic_cost
     
 
     def g(self, input_sequences, start_states=None):
-        '''
+        """
         Compute hidden unit activations.
 
         Args:
-            input_sequences: Batch of input sequences with shape [batch_size, sequence_length, 2].
-            start_states: Batch of start states with shape [batch_size, feature_dim]
+            input_sequences: Batch of input sequences with shape [batch_size, sequence_length, input_dim].
+            start_states: Batch of start states with shape [batch_size, input_dim]
 
         Returns: 
-            activation_history: Batch of hidden unit activations with shape [batch_size, sequence_length, output_dim].
-        '''
+            activation_history: Batch of hidden unit activations with shape [batch_size, sequence_length, hidden_dim].
+        """
         init_activations = None
         if start_states is not None:
             init_activations = self.encoder(start_states)
@@ -56,16 +58,16 @@ class RNN(Model):
     
 
     def call(self, input_sequences, start_states=None, return_activation_history=False):
-        '''
-        Predict place cell code.
+        """
+        Compute model output.
 
         Args:
-            input_sequences: Batch of input sequences with shape [batch_size, sequence_length, 2].
-            start_states: Batch of start states with shape [batch_size, feature_dim]
+            input_sequences: Batch of input sequences with shape [batch_size, sequence_length, input_dim].
+            start_states: Batch of start states with shape [batch_size, input_dim].
 
         Returns: 
             output_sequences: Predicted output sequence with shape [batch_size, sequence_length, output_dim].
-        '''
+        """
         activation_history = self.g(input_sequences, start_states)
         output_sequences = self.decoder(activation_history)
         if return_activation_history:
@@ -75,13 +77,17 @@ class RNN(Model):
 
 
     def loss(self, targets, input_sequences, start_states=None):
-        '''
-        Compute avg. loss.
+        """
+        Compute mean loss for batch of inputs.
 
         Args:
+            targets: Ground truth outputs.
+            input_sequences: Batch of input sequences with shape [batch_size, sequence_length, input_dim].
+            start_states: Batch of start states with shape [batch_size, input_dim].
 
         Returns:
-        '''
+            loss: Average loss for the batch of inputs.
+        """
         preds, activation_history = self.call(input_sequences, start_states,
                                               return_activation_history=True)
         loss = tf.reduce_mean(self.loss_fun(targets, preds))

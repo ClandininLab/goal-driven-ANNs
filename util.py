@@ -1,31 +1,25 @@
+"""
+Helper methods for visualization in IPython notebooks.
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
-import pickle
-
-
-def save_model(model, file_name):
-    """
-    Saves a model using pickel.
-    """
-    with open(file_name, 'wb') as f:
-        pickle.dump(model, f)
-
-
-def load_model(file_name):
-    """
-    Loads a saved model using pickel.
-    """
-    model = None
-    with open(file_name, 'rb') as f:
-        model = pickle.load(f)
-    return model
+import matplotlib.colors as mpcol
 
 
 def insert_discontinuity(sequence, threshold):
     """
-    For plotting purposes, inserts discontinuities in the given sequence
-    where the absolute difference between subsequent values exceeds some
-    maximum value.
+    This helper method for plot_sequence inserts discontinuities in the
+    given sequence where the absolute difference between subsequent values
+    exceeds some maximum value.
+
+    Args:
+        sequence: Sequence to be plotted.
+        theshold: Minimum absolute difference between successive values in
+                  `sequence` to insert discontinuity.
+
+    Return:
+        formatted: Sequence with discontinuities inserted at appropriate locations.
     """
     if threshold is None:
         return sequence
@@ -37,9 +31,18 @@ def insert_discontinuity(sequence, threshold):
 def plot_sequence(ground_truth, prediction=None, mode=None,
                   discontinuity_threshold=None):
     """
-    Given a sequence of shape (batch_size, sequence_length, feature_dim),
-    plots each sequence in the batch. Only the 0 index value of each feature
-    is plotted (i.e. we plot sequence[i, :, 0])
+    Given a sequence of ground truth and/or model outputs, this helper method
+    visualizes it.
+
+    Args:
+        ground_truth: Target output sequence for network (solid line in plot)
+                      of shape [batch_size, sequence_length, output_dim].
+        prediction: Output sequence produced by network (dashed line in plot)
+                    of shape [batch_size, sequence_length, output_dim].
+        mode: Format of output ('sine' for models that output sine/cosine of angle vs.
+                                'radians' for models that output angle in radians)
+        discontinuity_treshold: threshold for inserting discontinuities in plot of
+                                sequence (purely aesthetic, unnecessary if mode is specified)
     """
     batch_size, sequence_length, _ = ground_truth.shape
     cmap = plt.get_cmap(name='hsv', lut=batch_size)
@@ -64,18 +67,45 @@ def plot_sequence(ground_truth, prediction=None, mode=None,
     plt.show()
 
 
-def visualize_recurrent(model):
+def visualize_recurrent(matrix, seperators=[]):
     """
-    Given an RNN model, displays its recurrent weight matrix.
+    Method to visualize the recurrent weight matrix of an RNN.
+
+    Args:
+        matrix: Recurrent weight matrix in the form of a numpy array.
+        seperators: Locations to insert black dotted lines in the plot to
+                    visually seperate neuronal subpopulations of interest.
     """
-    W_recurrent = model.rnn.weights[1].numpy()
-    plt.matshow(W_recurrent)
+    plt.set_cmap('bwr')
+    figure = plt.figure() 
+    axes = figure.add_subplot(111) 
+      
+    caxes = axes.matshow(matrix)
+    caxes.set_norm(mpcol.Normalize(-.75, .75, clip=True))   # +/- .75 chosen arbitrarily
+    figure.colorbar(caxes)
+
+    hidden_dim = matrix.shape[0]
+    for seperator in seperators:
+        axes.hlines(seperator, 0, hidden_dim - 1, linestyles='dotted')
+        axes.vlines(seperator, 0, hidden_dim - 1, linestyles='dotted')
+
+    plt.xlabel('Presynaptic ID')
+    plt.ylabel('Postsynaptic ID')
+    plt.show() 
 
 
-def plot_training_loss(trainer):
-    plt.plot(trainer.losses)
+def plot_loss(loss, title='Training Loss', ylabel='Loss'):
+    """
+    Plot training/validation loss of a model as a function of epoch.
+
+    Args:
+        loss: List of model losses where `loss[i]` is the loss for epoch i.
+        title: Plot title.
+        ylabel: Plot y-axis label.
+    """
+    plt.plot(loss)
+    plt.title(title)
     plt.xlabel('Epoch')
-    plt.ylabel('Loss')
-    plt.title('Training Loss')
+    plt.ylabel(ylabel)
     plt.show()
 

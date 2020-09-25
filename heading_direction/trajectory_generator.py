@@ -5,6 +5,7 @@ class TrajectoryGenerator(object):
     def __init__(self, sequence_length, standard_deviation, momentum,
                  step_size=1, start_pos=None, modulo=True):
         """
+        Simulated trajectory generator for training.
         """
         self.sequence_length = sequence_length
         self.standard_deviation = standard_deviation
@@ -16,6 +17,17 @@ class TrajectoryGenerator(object):
 
     def generate_trajectory(self, batch_size):
         """
+        Generates a batch of simulated heading trajectories.
+
+        Args:
+            batch_size: Number of trajectories in batch.
+
+        Return:
+            start: Array of shape [batch_size, 1] encoding start states.
+            velocity: Array of shape [batch_size, sequence_length, 1] containing
+                      input to model at each timestep.
+            position: Array of shape [batch_size, sequence_length, 1] containing
+                      target output sequences for each batch.
         """
         start = None
         if self.start_pos is None:   # randomize start positions
@@ -36,7 +48,20 @@ class TrajectoryGenerator(object):
 
 
     def generate_linear(self, batch_size, num_rotations=1):
-        
+        """
+        For debugging. Generates a batch of simple linear trajectories.
+
+        Args:
+            batch_size: Number of trajectories in batch.
+            num_rotations: Number of constant speed full rotations in trajectory.
+
+        Return:
+            start: Array of shape [batch_size, 1] encoding start states.
+            velocity: Array of shape [batch_size, sequence_length, 1] containing
+                      input to model at each timestep.
+            position: Array of shape [batch_size, sequence_length, 1] containing
+                      target output sequences for each batch.
+        """
         start = None
         if self.start_pos is None:   # randomize start positions
             start = np.random.uniform(0, 2 * np.pi, (batch_size, 1)).astype(np.float32)

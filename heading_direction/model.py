@@ -1,3 +1,8 @@
+"""
+RNN child classes for angular velocity/heading integration.
+See parent class in ../parent_model.py for more details.
+"""
+
 import numpy as np
 from tensorflow.keras.constraints import Constraint
 from tensorflow.keras.utils import to_categorical
@@ -7,7 +12,6 @@ import sys
 parent_directory = os.path.dirname(os.getcwd())
 sys.path.append(parent_directory)
 from parent_model import RNN
-import util
 
 
 class ZeroDiagonal(Constraint):
@@ -53,33 +57,49 @@ class ClassifierHDRNN(RNN):
     direction at each time step, minimizing cross entropy.
     """
     def __init__(self, **kwargs):
-        super(HDRNN, self).__init__(input_dim=1, recurrent_constraint=ZeroDiagonal(), **kwargs,
-                                    loss_fun={"class_name": "CategoricalCrossentropy",
-                                              "config": {"from_logits": True} })
+        super(ClassifierHDRNN, self).__init__(input_dim=1, **kwargs,
+			                                  loss_fun={"class_name": "CategoricalCrossentropy",
+			                                            "config": {"from_logits": True}})
 
 
     def loss(self, target, input_sequences, start_states=None):
         discretized_target = discretize(target, self.output_dim)
-        return super(HDRNN, self).loss(discretized_target, input_sequences, start_states)
+        return super(ClassifierHDRNN, self).loss(discretized_target, input_sequences, start_states)
 
 
 ############################## HELPER METHODS ##############################
 
-def trig(sequence):
+def trig(matrix):
     """
-    Given an array of shape (..., 1), returns an array of shape (..., 2) whose
-    stacks contain the sine and cosine of the original array, respectively.
+    Given an array of angles in radians, this helper method for HDRNN.
+    converts each angle to its [sin, cos].
+
+    Args:
+        matrix: Array of angles in radians of shape [..., 1].
+
+    Return:
+        Array of shape [..., 2] wherein each angle in matrix has been replaced
+        by its sin and cos.
     """
-    return np.concatenate([np.sin(sequence), np.cos(sequence)], axis=-1)
+    return np.concatenate([np.sin(matrix), np.cos(matrix)], axis=-1)
 
 
-def discretize(sequence, precision, min_val=0, max_val=2 * np.pi):
+def discretize(matrix, num_bins, min_value=0, max_value=2 * np.pi):
     """
-    Given an array of values between min_val and max_val of shape (..., 1),
-    returns an array of shape (..., precision) wherein each feature in the
-    -1th dimension is a discretized one-hot encoding of the corresponsing value
-    in the original array.
+    Given an array of values between min_val and max_val of shape [..., 1],
+    this helper method for ClassifierHDRNN returns an array of shape [..., num_bins]
+    wherein the -1th dimension of each feature is a discretized one-hot encoding of the
+    corresponsing value in the -1th dimension original array.
+
+    Args:
+        matrix: Array of values between min_val and max_val of shape [..., 1].
+        num_bins: Number of discrete bins in which to map continuous values of `matrix`.
+        min_value: Value corresponding to lower bound of first bin.
+        max_value: Value corresponding to upper bound of last bin.
+
+    Return:
+        one-hot encoding as described above.
     """
-    normed = (sequence + min_value) / max_value * precision
-    return to_categorical(normed, precision)
+    normed = (matrix + min_value) / max_value * num_bins    
+    return to_categorical(normed, num_bins)
 
